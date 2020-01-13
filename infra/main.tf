@@ -147,10 +147,9 @@ resource "aws_iam_server_certificate" "ss_cert" {
 
 resource "aws_elb" "web_elb" {
   name               = "tf-web-elb"
-  availability_zones = slice(data.aws_availability_zones.available.names, 0, 2)
-
-  # subnets            = aws_subnet.tf_subnet[*].id
-
+  # availability_zones = slice(data.aws_availability_zones.available.names, 0, 2)
+  subnets            = aws_subnet.tf_subnet[*].id
+  security_groups    = [aws_security_group.tf_public_sg.id]
   listener {
     instance_port     = 80
     instance_protocol = "http"
