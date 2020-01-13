@@ -135,70 +135,6 @@ resource "aws_security_group" "tf_public_sg" {
   }
 }
 
-# resource "aws_acm_certificate" "ssl_cert" {
-#   domain_name               = var.root_domain_name
-#   validation_method         = "EMAIL"
-#   subject_alternative_names = ["*.${var.root_domain_name}"]
-
-#   tags = {
-#     Environment = "test"
-#   }
-
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
-
-# data "aws_route53_zone" "zone" {
-#   name         = "deepgorthi.com."
-#   private_zone = false
-# }
-
-# resource "aws_route53_record" "cert_validation" {
-#   name    = aws_acm_certificate.ssl_cert.domain_validation_options.0.resource_record_name
-#   type    = aws_acm_certificate.ssl_cert.domain_validation_options.0.resource_record_type
-#   zone_id = data.aws_route53_zone.zone.id
-#   records = [aws_acm_certificate.ssl_cert.domain_validation_options.0.resource_record_value]
-#   ttl     = 60
-# }
-
-# resource "aws_acm_certificate_validation" "cert" {
-#   certificate_arn         = aws_acm_certificate.ssl_cert.arn
-#   validation_record_fqdns = [
-#       aws_route53_record.cert_validation.fqdn,
-#     ]
-# }
-
-
-
-
-
-
-# resource "tls_private_key" "ss_key" {
-#   algorithm = "ECDSA"
-# }
-
-# resource "tls_self_signed_cert" "ss_cert" {
-#   key_algorithm   = tls_private_key.ss_key.algorithm
-#   private_key_pem = tls_private_key.ss_key.private_key_pem
-#   validity_period_hours = 3600
-#   early_renewal_hours = 2400
-#   allowed_uses = [
-#       "key_encipherment",
-#       "digital_signature",
-#       "server_auth",
-#   ]
-#   dns_names = ["test_deep.com"]
-#   subject {
-#       common_name  = "test_deep.com"
-#       organization = "Deep Gorthi, Inc"
-#   }
-# }
-
-
-
-
-
 resource "aws_iam_server_certificate" "ss_cert" {
   name_prefix      = "tf-ss-cert"
   certificate_body = file("tf_cert/certs/ss_ca.pem")
@@ -228,14 +164,6 @@ resource "aws_elb" "web_elb" {
     ssl_certificate_id = aws_iam_server_certificate.ss_cert.arn
   }
 
-  health_check {
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 3
-    target              = "HTTP:80/"
-    interval            = 30
-  }
-
   instances                   = aws_instance.webserver[*].id
   cross_zone_load_balancing   = true
   idle_timeout                = 400
@@ -246,86 +174,3 @@ resource "aws_elb" "web_elb" {
     Name = "tf-web-elb"
   }
 }
-
-
-
-
-
-###################################################################
-# resource "aws_lb" "web_lb" {
-#   name               = "tf-web-lb"
-#   internal           = false
-#   load_balancer_type = "application"
-#   subnets            = aws_subnet.tf_subnet[*].id
-#   security_groups    = aws_security_group.tf_public_sg[*].id
-
-#   tags = {
-#     Name = "tf_web_lb"
-#   }
-# }
-
-# resource "aws_lb_target_group" "web_lb_target" {
-#   name     = "web-loadbalancer-target"
-#   port     = "80"
-#   protocol = "HTTP"
-#   vpc_id   = aws_vpc.tf_vpc.id
-# }
-
-# resource "aws_lb_target_group_attachment" "web_lb_attachment" {
-#   count    = length(aws_subnet.tf_subnet)
-#   target_group_arn = aws_lb_target_group.web_lb_target.arn
-#   target_id = aws_instance.webserver[count.index].id
-#   port = "80"
-# }
-
-# resource "aws_lb_listener" "front_end" {
-#   load_balancer_arn = aws_lb.web_lb.arn
-#   port = "80"
-#   protocol = "HTTP"
-
-#   default_action {
-#     type = "forward"
-#     target_group_arn = aws_lb_target_group.web_lb_target.arn
-#   }
-# }
-
-# resource "aws_lb_listener_rule" "redirect_http_to_https" {
-#   listener_arn = aws_lb_listener.front_end.arn
-
-#   action {
-#     type = "redirect"
-
-#     redirect {
-#       port        = "443"
-#       protocol    = "HTTPS"
-#       status_code = "HTTP_301"
-#     }
-#   }
-
-#   condition {
-#     http_header {
-#       http_header_name = "X-Forwarded-For"
-#       values           = ["*"]
-#     }
-#   }
-# }
-
-# resource "aws_lb_listener_certificate" "lb_listener_cert" {
-#   listener_arn    = aws_lb_listener.front_end.arn
-#   certificate_arn = aws_iam_server_certificate.ss_cert.arn
-# }
-
-###################################################################
-
-
-# resource "aws_route53_record" "test" {
-#   zone_id = data.aws_route53_zone.zone.zone_id
-#   name = "test.deepgorthi.com"
-#   type = "A"
-
-#   alias {
-#     name = aws_lb.web_lb.dns_name
-#     zone_id = aws_lb.web_lb.zone_id
-#     evaluate_target_health = true
-#   }
-# }
